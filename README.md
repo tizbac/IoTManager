@@ -14,3 +14,9 @@ python Main.py [network]
 Where [network] is the network where the ESP8266s are, like 192.168.1.0/24
 
 Then finally map the 8080 TCP port on your router to raspberry IP , connect to https://raspberryip:8080 and scan the QR Code with the android application
+
+
+License
+=======
+
+The software of this repository is licensed under the GPLv3 license except where explicitly another license header is present
