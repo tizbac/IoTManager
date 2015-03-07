@@ -1,5 +1,6 @@
 package info.linuxehacking.iotmanager;
 
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -15,8 +16,35 @@ public class OutputControl extends ActionBarActivity {
     private Device dev;
     private ToggleButton tb1;
     private ToggleButton tb2;
-    OutputControlSendCommandAndGetDeviceStatusTask task = null;
-    class OutputControlSendCommandAndGetDeviceStatusTask extends SendCommandAndGetDeviceStatusTask {
+    AsyncTask task = null;
+    class OutputControlSetStateTask extends SetStateTask {
+        @Override
+        protected void onPreExecute() {
+            tb1.setEnabled(false);
+            tb2.setEnabled(false);
+        }
+        @Override
+        protected void onPostExecute(ArrayList<Boolean> booleans) {
+            super.onPostExecute(booleans);
+
+
+            if ( booleans.size() == 2 ) {
+                tb1.setEnabled(true);
+                tb2.setEnabled(true);
+                tb1.setChecked(booleans.get(0));
+                tb2.setChecked(booleans.get(1));
+            }
+
+        }
+    }
+    class OutputControlRetriveStateTask extends RetrieveStateTask {
+
+        @Override
+        protected void onPreExecute() {
+            tb1.setEnabled(false);
+            tb2.setEnabled(false);
+        }
+
         @Override
         protected void onPostExecute(ArrayList<Boolean> booleans) {
             super.onPostExecute(booleans);
@@ -45,13 +73,15 @@ public class OutputControl extends ActionBarActivity {
         tb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                sendCommand((byte) (((byte) '0')+((isChecked ? 1 : 0) | (tb2.isChecked() ? 2 : 0))));
+                task = new SetStateTask();
+                ((SetStateTask)task).execute(dev,OutputControl.this,(isChecked ? 1 : 0 ) | (tb2.isChecked() ? 2 : 0 ));
             }
         });
         tb2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                sendCommand((byte) (((byte) '0')+((isChecked ? 2 : 0) | (tb1.isChecked() ? 1 : 0))));
+                task = new OutputControlSetStateTask();
+                ((OutputControlSetStateTask)task).execute(dev,OutputControl.this,(isChecked ? 2 : 0 ) | (tb1.isChecked() ? 1 : 0 ));
             }
         });
         tvName.setText(dev.getName());
@@ -60,21 +90,11 @@ public class OutputControl extends ActionBarActivity {
 
     }
 
-    private void sendCommand(byte cmd)
-    {
-        if ( task != null )
-            task.cancel(true);
-        tb1.setEnabled(false);
-        tb2.setEnabled(false);
-        task = new OutputControlSendCommandAndGetDeviceStatusTask();
-        task.execute(dev,cmd);
-
-    }
-
     @Override
     protected void onStart() {
         super.onStart();
-        sendCommand((byte) '8');
+        task = new OutputControlRetriveStateTask();
+        ((OutputControlRetriveStateTask)task).execute(dev,this);
     }
 
     @Override

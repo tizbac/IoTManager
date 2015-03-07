@@ -8,10 +8,14 @@ import java.io.Serializable;
 public class Device implements Serializable {
     private String name;
     private String ipaddr;
-    public Device(String name, String ipaddr)
+    private String uid;
+    private String state;
+    public Device(String name, String ipaddr, String uid, String state)
     {
         this.name = name;
         this.ipaddr = ipaddr;
+        this.uid = uid;
+        this.state = state;
     }
 
     public String getIpaddr() {
@@ -22,14 +26,22 @@ public class Device implements Serializable {
         return name;
     }
 
+    public String getUid() {
+        return uid;
+    }
+
+    public String getState() {
+        return state;
+    }
+
     @Override
     public int hashCode() {
-        return (ipaddr+name).hashCode();
+        return uid.hashCode();
     }
 
     @Override
     public boolean equals(Object o) {
         Device other = (Device)o;
-        return other.name.equals(name) && other.ipaddr.equals(ipaddr);
+        return other.uid.equals(uid);
     }
 }
