@@ -15,7 +15,7 @@ from twisted.web import server, resource
 from twisted.internet import ssl, protocol, task, defer, reactor
 from twisted.python.modules import getModule
 
-
+import urllib2
 
 
 
@@ -33,8 +33,11 @@ disc_sock.bind(("",9000))
 disc_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
 #Only needed for testing , after that a service to retrieve the public ip address is required
-localip = [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
+#localip = [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
 
+
+localip = urllib2.urlopen('http://ip.42.pl/raw').read().strip(" \r\n\t")
+print "Public IPv4 Address: "+localip
 if not os.path.isfile('privkey.pem') or not os.path.isfile('server.pem'):
   print "Generating SSL Self-Signed certificates"
   key = crypto.PKey()
