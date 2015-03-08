@@ -8,7 +8,9 @@ Usage
 Flash esp8266/init.lua to one or more nodemcu devices and do the following commands from serial port
 
 wifi.setmode(wifi.STATION)
+
 wifi.sta.config("SSID","password")
+
 node.restart()
 
 Where SSID and password are your network's
