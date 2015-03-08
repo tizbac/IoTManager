@@ -10,14 +10,16 @@ import os.path
 from OpenSSL import crypto
 
 from socket import *
-from netaddr import *
 from twisted.web import server, resource
 from twisted.internet import ssl, protocol, task, defer, reactor
-from twisted.python.modules import getModule
 
 import urllib2
 
-
+def ip2int(ip):
+  i = ip.split(".")
+  return int(i[3]) | ( int(i[2]) << 8 ) | ( int(i[1]) << 16 ) | ( int(i[0]) << 24 )
+def int2ip(i):
+  return "%d.%d.%d.%d"%(( i >> 24 ) & 0xff,( i >> 16 ) & 0xff,( i >> 8 ) & 0xff,( i  ) & 0xff)
 
 #7 Name
 #8 State
@@ -25,8 +27,13 @@ import urllib2
 #A Summary ( UID,Name,State )
 nodes = {} # { UID, Name , State, IP }
 
-ip = IPNetwork(sys.argv[1])
-ips = map(str,ip)
+start = ip2int(sys.argv[1].split("/")[0])
+mask = int(sys.argv[1].split("/")[1])
+ips = []
+
+for x in range(start+1,start+2**(32-mask)-1):
+  ips.append(int2ip(x))
+
 
 disc_sock = socket(AF_INET,SOCK_DGRAM)
 disc_sock.bind(("",9000)) 
