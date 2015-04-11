@@ -5,7 +5,15 @@ Very simple nodemcu lua firmware + python ssl webserver + android app to create 
 Usage
 =====
 
-Flash esp8266/init.lua to one or more nodemcu devices ( add or set ssid and password if required )
+Flash esp8266/init.lua to one or more nodemcu devices and do the following commands from serial port
+
+wifi.setmode(wifi.STATION)
+
+wifi.sta.config("SSID","password")
+
+node.restart()
+
+Where SSID and password are your network's
 
 Start the server on some low power device like a raspberry pi using 
 

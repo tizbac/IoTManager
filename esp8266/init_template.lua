@@ -1,6 +1,11 @@
+<<<<<<< HEAD:esp8266/init_template.lua
 nome = %%NAME%%
 uid = %%UID%%
 portconfig = %%PORTCONFIG%%
+=======
+nome = "Prova1" -- Your choice try to keep them as short as possible
+uid = "0000001" -- Must be unique on the network
+>>>>>>> github/master:esp8266/init.lua
 
 tmr.alarm(0, 1000, 1, function()
    if wifi.sta.getip() == nil then
