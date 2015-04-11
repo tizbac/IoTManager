@@ -4,14 +4,18 @@ import time
 import json
 import signal
 import random
-import StringIO
+import io
 import qrcode
+import IOTIOMapping
+import IOTNode
+import re
 import os.path
 from OpenSSL import crypto
 
 from socket import *
 from twisted.web import server, resource
 from twisted.internet import ssl, protocol, task, defer, reactor
+
 
 import urllib2
 
@@ -44,9 +48,9 @@ disc_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
 
 localip = urllib2.urlopen('http://ip.42.pl/raw').read().strip(" \r\n\t")
-print "Public IPv4 Address: "+localip
+print("Public IPv4 Address: "+localip)
 if not os.path.isfile('privkey.pem') or not os.path.isfile('server.pem'):
-  print "Generating SSL Self-Signed certificates"
+  print("Generating SSL Self-Signed certificates")
   key = crypto.PKey()
   key.generate_key(crypto.TYPE_RSA,2048)
   cert = crypto.X509()
@@ -69,7 +73,7 @@ if not os.path.isfile('privkey.pem') or not os.path.isfile('server.pem'):
   f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
   f.close()
 else:
-  print "Certificates already existing"
+  print("Certificates already existing")
   cert = crypto.load_certificate(crypto.FILETYPE_PEM,open("server.pem").read())
   shahash = cert.digest("sha1").replace(":","").lower()
 
@@ -82,7 +86,7 @@ key = ""
 try:
   key = open("key.txt","r").read()
 except:
-  print "Generating new password"
+  print("Generating new password")
   key = ""
   for i in range(0,32):
     x = random.randint(0,2)
@@ -95,11 +99,9 @@ except:
   f = open("key.txt","w")
   f.write(key)
   f.close()
-print "Key is: "+key
+print("Key is: "+key)
 def applyNodeState(node):
-  sock = socket(AF_INET,SOCK_DGRAM)
-  sock.sendto(node["State"], (node["IP"],8000))
-  sock.close() #In the case the command got lost, it will be retried at the next discovery round
+  node.applyDigitalState()
   
   
 
@@ -110,28 +112,42 @@ def discoveryThread():
     
     
     starttime = time.time()
-    print "Discovery round starting..."
+    print("Discovery round starting...")
     
     disc_sock.settimeout(10)
     for x in ips[1:len(ips)-1]:
       disc_sock.sendto("A",(x,8000))
+      time.sleep(0.01)
     disc_sock.settimeout(0.1)
     while time.time() - starttime < 5.0:
       try:
-        data,addr = disc_sock.recvfrom(64)
+        data,addr = disc_sock.recvfrom(1500)
+        print(addr)
         data = data.split(",")
-        if data[0] in nodes:
-          nodes[data[0]]["Name"] = data[1]
-          nodes[data[0]]["IP"] = addr[0]
-          if data[2] != nodes[data[0]]["State"]: #State is incoherent
-            applyNodeState(nodes[data[0]])
+        uid = data[0]
+        name = data[1]
+        ipaddress = addr[0]
+        
+        if len(data) > 3:
+            iomapping = data[3]
         else:
-          nodes[data[0]] = { "UID" : data[0] , "Name" : data[1], "State" : data[2], "IP" : addr[0] }
+            iomapping = IOTIOMapping.getDefaultESP_01Config() # Default esp8266 module with 2 GPIOs
+        
+        digitalstate = IOTNode.unpackDigitalState(data[2])
+        iomapping = IOTIOMapping.getIOMappingFromConfigStr(iomapping)
+        
+        if uid in nodes:
+          nodes[uid].name = name
+          nodes[uid].ipaddress = ipaddress
+          if digitalstate != nodes[uid].digitalstate: #State is incoherent
+            applyNodeState(nodes[uid])
+        else:
+          nodes[uid] = IOTNode.IOTNode(uid,name,iomapping,digitalstate,ipaddress)
         
         
       except timeout:
         pass
-    print "Discovery round complete", nodes
+    print("Discovery round complete", nodes)
     time.sleep(10.0)
   
 
@@ -146,7 +162,7 @@ class Simple(resource.Resource):
       # Output the auth QR-Code
       request.setHeader("Content-Type", "image/png")
       
-      output = StringIO.StringIO()
+      output = io.StringIO.StringIO()
       qrcode.make(localip+",8080,"+key+","+shahash).save(output,'PNG')
       s = output.getvalue()
       output.close()
@@ -159,7 +175,6 @@ class Simple(resource.Resource):
   def render_POST(self, request):
     nodes_safe = dict(nodes)
     request.setHeader("Content-Type", "application/json")
-    print request.args
     if not "key" in request.args or request.args["key"][0] != key:
       return json.dumps({"error" : "Access denied from "+request.getClientIP() , "result" : None })
     if request.uri.startswith("/list"):
@@ -169,7 +184,8 @@ class Simple(resource.Resource):
       if len(sl) == 3:
         if not sl[2] in nodes_safe:
           return json.dumps({"error" : "No such device" , "result" : None })
-        return json.dumps({"error" : None , "result" : nodes_safe[sl[2]]})
+        node = nodes_safe[sl[2]]
+        return json.dumps({"error" : None , "result" : { "digitaloutstate" : node.digitalstate, "digitalinstate" : node.digitalinputstate, "analoginstate" : node.analoginputstate}})
       else:
         return json.dumps({"error" : "Invalid argument" , "result" : None })
     if request.uri.startswith("/setstate"):
@@ -177,7 +193,7 @@ class Simple(resource.Resource):
       if len(sl) == 4:
         uid = sl[2]
         if uid in nodes_safe:
-          nodes[uid]["State"] = sl[3]
+          nodes[uid].digitalstate = int(sl[3])
           applyNodeState(nodes[uid])
           return json.dumps({"error" : None, "result" : nodes[uid]})
         else:
@@ -185,9 +201,9 @@ class Simple(resource.Resource):
       else:
         return json.dumps({"error" : "Invalid argument" , "result" : None })
 def onexit(signum, frame):
-  print "Exiting..."
+  print("Exiting...")
   reactor.stop()
-  print "HTTP Server stopped"
+  print("HTTP Server stopped")
   
 signal.signal(signal.SIGINT, onexit)
 signal.signal(signal.SIGTERM, onexit)
@@ -200,8 +216,9 @@ dth.start()
 
 site = server.Site(Simple())
 reactor.listenSSL(8080, site, contextFactory = sslContext)
-print "Listening on 8080"
+print("Listening on 8080")
 reactor.run()
-print "Exited."
+print("Exited.")
 sys.exit(0)
+
 

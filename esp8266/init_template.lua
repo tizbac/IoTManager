@@ -1,5 +1,6 @@
-nome = "Prova1"
-uid = "0000001"
+nome = %%NAME%%
+uid = %%UID%%
+portconfig = %%PORTCONFIG%%
 
 tmr.alarm(0, 1000, 1, function()
    if wifi.sta.getip() == nil then
@@ -10,21 +11,21 @@ tmr.alarm(0, 1000, 1, function()
    end
 end)
 
-gpio.mode(3, gpio.OUTPUT)
-gpio.mode(4, gpio.OUTPUT)
-gpio.write(3, gpio.LOW)
-gpio.write(4, gpio.LOW)
+--gpio.mode(3, gpio.OUTPUT)
+--gpio.mode(4, gpio.OUTPUT)
+--gpio.write(3, gpio.LOW)
+--gpio.write(4, gpio.LOW)
 
-state = 0
+--state = 0
 
-
+%%STATES_DEF%%
 
 function udprecv(c,pl)
 
 	n = tonumber(pl)
 	if pl == "A" then
 
-		c:send(uid..","..nome..","..tostring(state))
+		c:send(uid..","..nome..","..%%STATE_STRING_CONCAT%%)
 		return
 	end
 	if n == nil then

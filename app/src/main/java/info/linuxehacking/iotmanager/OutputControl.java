@@ -73,15 +73,19 @@ public class OutputControl extends ActionBarActivity {
         tb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                task = new SetStateTask();
-                ((SetStateTask)task).execute(dev,OutputControl.this,(isChecked ? 1 : 0 ) | (tb2.isChecked() ? 2 : 0 ));
+                if ( tb1.isPressed() ) {
+                    task = new OutputControlSetStateTask();
+                    ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, (isChecked ? 1 : 0) | (tb2.isChecked() ? 2 : 0));
+                }
             }
         });
         tb2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                task = new OutputControlSetStateTask();
-                ((OutputControlSetStateTask)task).execute(dev,OutputControl.this,(isChecked ? 2 : 0 ) | (tb1.isChecked() ? 1 : 0 ));
+                if ( tb2.isPressed() ) {
+                    task = new OutputControlSetStateTask();
+                    ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, (isChecked ? 2 : 0) | (tb1.isChecked() ? 1 : 0));
+                }
             }
         });
         tvName.setText(dev.getName());
