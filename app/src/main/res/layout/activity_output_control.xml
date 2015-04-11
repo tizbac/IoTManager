@@ -17,48 +17,22 @@
         android:textSize="30dp"
         android:textIsSelectable="false" />
 
-    <TextView
+    <ScrollView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Output 1"
-        android:id="@+id/textView"
+        android:id="@+id/scrollView"
         android:layout_below="@+id/txt_out_title"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="75dp" />
-
-    <ToggleButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="New ToggleButton"
-        android:id="@+id/toggle1"
-        android:layout_alignTop="@+id/textView"
-        android:layout_alignLeft="@+id/txt_out_title"
-        android:layout_alignStart="@+id/txt_out_title"
+        android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Output 2"
-        android:id="@+id/textView2"
-        android:layout_below="@+id/toggle1"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="55dp" />
+        android:layout_alignParentStart="true" >
 
-    <ToggleButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="New ToggleButton"
-        android:id="@+id/toggle2"
-        android:layout_alignTop="@+id/textView2"
-        android:layout_alignLeft="@+id/toggle1"
-        android:layout_alignStart="@+id/toggle1"
-        android:layout_alignRight="@+id/toggle1"
-        android:layout_alignEnd="@+id/toggle1" />
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:id="@+id/portsScroll"></LinearLayout>
+    </ScrollView>
 
 </RelativeLayout>

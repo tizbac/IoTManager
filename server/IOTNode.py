@@ -60,7 +60,7 @@ def unpackDigitalState(s):
     for port in data:
         port = port.split(":")
         portid = int(port[0])
-        portvalue = port[1]
+        portvalue = int(port[1])
         res[portid] = portvalue
     return res
 def createJSONReprFromNodeDict(d):

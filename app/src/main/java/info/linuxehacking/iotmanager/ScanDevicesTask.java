@@ -2,6 +2,7 @@ package info.linuxehacking.iotmanager;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,6 +16,7 @@ import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -50,7 +52,7 @@ public class ScanDevicesTask extends AsyncTask<Context, ArrayList<Device>, Array
             }
             writer.close();
             reader.close();
-
+            Log.i("Iotparse", sb.toString());
             JSONObject result = new JSONObject(sb.toString());
             if ( ! result.isNull("error") )
             {
@@ -62,8 +64,13 @@ public class ScanDevicesTask extends AsyncTask<Context, ArrayList<Device>, Array
             Iterator<String> it = items.keys();
             while ( it.hasNext() )
             {
-                JSONObject jdevice = items.getJSONObject(it.next());
-                Device dev = new Device(jdevice.getString("Name"),jdevice.getString("IP"),jdevice.getString("UID"),jdevice.getString("State"));
+
+                String UID = it.next();
+                JSONObject jdevice = items.getJSONObject(UID);
+
+                HashMap<Integer, Boolean> digital_state = Device.getDigitalStateFromJson(jdevice);
+
+                Device dev = new Device(jdevice.getString("Name"),jdevice.getString("IPAddress"),UID,digital_state,jdevice.getString("IOMapping"));
                 res.add(dev);
             }
 

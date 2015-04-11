@@ -14,22 +14,36 @@ import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import javax.net.ssl.HttpsURLConnection;
 
 /**
  * Created by tiziano on 08/03/15.
  */
-public class SetStateTask extends AsyncTask<Object, Integer, ArrayList<Boolean>> {
+public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boolean>> {
     private String error = null;
     @Override
-    protected ArrayList<Boolean> doInBackground(Object... params) {
-        ArrayList<Boolean> res = new ArrayList<Boolean>();
+    protected HashMap<Integer,Boolean> doInBackground(Object... params) {
+        HashMap<Integer,Boolean> res = null;
         Device dev = (Device)params[0];
-        int newstate = (Integer)params[2];
+        HashMap<Integer,Boolean> newState = (HashMap<Integer,Boolean>)params[2];
         Configuration conf = Configuration.get((android.content.Context) params[1]);
+
+        StringBuilder newstatesb = new StringBuilder();
+
+        Iterator<Integer> it = newState.keySet().iterator();
+        while ( it.hasNext() )
+        {
+            int portid = it.next();
+            int portstate = newState.get(portid) == true ? 1 : 0;
+            newstatesb.append(String.format("%d:%d,",portid,portstate));
+
+        }
+
         try {
-            URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/setstate/"+dev.getUid()+"/"+newstate);
+            URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/setstate/"+dev.getUid()+"/"+newstatesb.toString());
             URLConnection conn = website.openConnection();
             ( (HttpsURLConnection) conn ).setSSLSocketFactory( SHA1VerifyGenerator.generateFactory(conf.valid_certificate));
             ( (HttpsURLConnection) conn ).setHostnameVerifier( SHA1VerifyGenerator.getNullVerifier());
@@ -59,10 +73,9 @@ public class SetStateTask extends AsyncTask<Object, Integer, ArrayList<Boolean>>
             }
 
             JSONObject item = result.getJSONObject("result");
-            int state = item.getInt("State");
+            HashMap<Integer, Boolean> state = Device.getDigitalStateFromJson(item);
 
-            res.add((state & 0x1) != 0 );
-            res.add((state & 0x2) != 0 );
+            res = state;
 
         } catch (IOException e) {
             e.printStackTrace();

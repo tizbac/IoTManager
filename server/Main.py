@@ -4,11 +4,12 @@ import time
 import json
 import signal
 import random
-import io
+import StringIO
 import qrcode
 import IOTIOMapping
 import IOTNode
 import re
+import argparse
 import os.path
 from OpenSSL import crypto
 
@@ -25,14 +26,29 @@ def ip2int(ip):
 def int2ip(i):
   return "%d.%d.%d.%d"%(( i >> 24 ) & 0xff,( i >> 16 ) & 0xff,( i >> 8 ) & 0xff,( i  ) & 0xff)
 
-#7 Name
-#8 State
-#9 UID
-#A Summary ( UID,Name,State )
+parser = argparse.ArgumentParser(description="IOT Manager", conflict_handler='resolve')
+parser.add_argument("--help")
+parser.add_argument('--net', type=str, help="Network to use x.y.z.w/xx", required=True)
+parser.add_argument('--publicip', type=str, help="Override public ip address")
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit(1)
+    
+args = parser.parse_args(sys.argv[1:])
+
+
+#Only needed for testing , after that a service to retrieve the public ip address is required
+#localip = [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
+if args.publicip:
+    localip = args.publicip
+else:
+    localip = urllib2.urlopen('http://ip.42.pl/raw').read().strip(" \r\n\t")
+
 nodes = {} # { UID, Name , State, IP }
 
-start = ip2int(sys.argv[1].split("/")[0])
-mask = int(sys.argv[1].split("/")[1])
+start = ip2int(args.net.split("/")[0])
+mask = int(args.net.split("/")[1])
 ips = []
 
 for x in range(start+1,start+2**(32-mask)-1):
@@ -43,11 +59,7 @@ disc_sock = socket(AF_INET,SOCK_DGRAM)
 disc_sock.bind(("",9000)) 
 disc_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-#Only needed for testing , after that a service to retrieve the public ip address is required
-#localip = [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
 
-
-localip = urllib2.urlopen('http://ip.42.pl/raw').read().strip(" \r\n\t")
 print("Public IPv4 Address: "+localip)
 if not os.path.isfile('privkey.pem') or not os.path.isfile('server.pem'):
   print("Generating SSL Self-Signed certificates")
@@ -101,6 +113,7 @@ except:
   f.close()
 print("Key is: "+key)
 def applyNodeState(node):
+  print("Apply state: %s"%(str(node.digitalstate)))
   node.applyDigitalState()
   
   
@@ -139,6 +152,7 @@ def discoveryThread():
         if uid in nodes:
           nodes[uid].name = name
           nodes[uid].ipaddress = ipaddress
+          #print(str(data[2])+" "+str(digitalstate)+" "+str(nodes[uid].digitalstate))
           if digitalstate != nodes[uid].digitalstate: #State is incoherent
             applyNodeState(nodes[uid])
         else:
@@ -162,7 +176,7 @@ class Simple(resource.Resource):
       # Output the auth QR-Code
       request.setHeader("Content-Type", "image/png")
       
-      output = io.StringIO.StringIO()
+      output = StringIO.StringIO()
       qrcode.make(localip+",8080,"+key+","+shahash).save(output,'PNG')
       s = output.getvalue()
       output.close()
@@ -178,7 +192,7 @@ class Simple(resource.Resource):
     if not "key" in request.args or request.args["key"][0] != key:
       return json.dumps({"error" : "Access denied from "+request.getClientIP() , "result" : None })
     if request.uri.startswith("/list"):
-      return json.dumps({"error" : None , "result" : nodes_safe})
+      return json.dumps({"error" : None , "result" : IOTNode.createJSONReprFromNodeDict(nodes_safe)})
     if request.uri.startswith("/getstate"):
       sl = request.uri.split("/")
       if len(sl) == 3:
@@ -193,9 +207,15 @@ class Simple(resource.Resource):
       if len(sl) == 4:
         uid = sl[2]
         if uid in nodes_safe:
-          nodes[uid].digitalstate = int(sl[3])
+          newstatestr = sl[3]
+          for port in newstatestr.split(","):
+            if len(port) > 0:
+                portid = int(port.split(":")[0])
+                newstate = int(port.split(":")[1])
+                if portid in nodes[uid].digitalstate:
+                    nodes[uid].digitalstate[portid] = newstate
           applyNodeState(nodes[uid])
-          return json.dumps({"error" : None, "result" : nodes[uid]})
+          return json.dumps({"error" : None, "result" : { "digitaloutstate" : nodes[uid].digitalstate, "digitalinstate" : nodes[uid].digitalinputstate, "analoginstate" : nodes[uid].analoginputstate}})
         else:
           return json.dumps({"error" : "No such device" , "result" : None })
       else:

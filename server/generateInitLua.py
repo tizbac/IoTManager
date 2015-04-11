@@ -39,6 +39,21 @@ for portid in output_gpio_mapping:
 statestr = "..\";\"..".join(statestr_tokens)
 outfile.write("         c:send(uid..\",\"..nome..\",\"..%s..\",\"..portconfig)\n"%(statestr))
 outfile.write("   end\n")
+outfile.write("   if string.sub(pl,1,1) == \"B\" then\n")
+outfile.write("         newstatestr = string.sub(pl,2)\n")
+outfile.write("         for i in string.gmatch(newstatestr,\"[^;]+\") do\n")
+outfile.write("              tokens = {}\n")
+outfile.write("              index = 1\n")
+outfile.write("              for k in string.gmatch(i,\"[^:]+\") do\n")
+outfile.write("                   tokens[index] = k\n")
+outfile.write("                   index = index + 1\n")
+outfile.write("              portid = tonumber(tokens[1])\n")
+outfile.write("              portnewstate = tonumber(tokens[2])\n")
+indent = "              "
+for portid in output_gpio_mapping:
+    outfile.write(indent+"if portid == %d then\n"%(portid))
+    outfile.write(indent+"   "*1+"if portnewstate == 1 then\n")
+    outfile.write(indent+"   "*2+"gpio.write(%d, gpio.HIGH)"%(output_gpio_mapping[portid]))
 outfile.write("end\n")
 outfile.write("srv=net.createServer(net.UDP)\nsrv:on(\"receive\",udprecv)\nsrv:listen(8000)\n")
 

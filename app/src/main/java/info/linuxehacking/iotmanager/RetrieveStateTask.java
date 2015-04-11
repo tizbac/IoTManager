@@ -19,6 +19,7 @@ import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -26,11 +27,11 @@ import javax.net.ssl.HttpsURLConnection;
 /**
  * Created by tiziano on 06/03/15.
  */
-public class RetrieveStateTask extends AsyncTask<Object, Integer, ArrayList<Boolean>> {
+public class RetrieveStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boolean>> {
     private String error = null;
     @Override
-    protected ArrayList<Boolean> doInBackground(Object... params) {
-        ArrayList<Boolean> res = new ArrayList<Boolean>();
+    protected HashMap<Integer,Boolean> doInBackground(Object... params) {
+        HashMap<Integer,Boolean> res = null;
         Device dev = (Device)params[0];
 
         Configuration conf = Configuration.get((android.content.Context) params[1]);
@@ -65,10 +66,9 @@ public class RetrieveStateTask extends AsyncTask<Object, Integer, ArrayList<Bool
             }
 
             JSONObject item = result.getJSONObject("result");
-            int state = item.getInt("State");
+            HashMap<Integer, Boolean> state = Device.getDigitalStateFromJson(item);
 
-            res.add((state & 0x1) != 0 );
-            res.add((state & 0x2) != 0 );
+            res = state;
 
         } catch (IOException e) {
             e.printStackTrace();

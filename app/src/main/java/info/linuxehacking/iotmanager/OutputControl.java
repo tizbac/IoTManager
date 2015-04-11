@@ -6,34 +6,64 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 
 public class OutputControl extends ActionBarActivity {
     private Device dev;
-    private ToggleButton tb1;
-    private ToggleButton tb2;
+    private HashMap<Integer,ToggleButton> toggles;
+    HashMap<Integer,Boolean> curstate;
     AsyncTask task = null;
+
+    void setAllButtonsDisabled()
+    {
+        Iterator<ToggleButton> it = toggles.values().iterator();
+        while ( it.hasNext() )
+            it.next().setEnabled(false);
+
+    }
+    void setAllButtonsEnabled()
+    {
+        Iterator<ToggleButton> it = toggles.values().iterator();
+        while ( it.hasNext() )
+            it.next().setEnabled(true);
+
+    }
+    void updateButtonState()
+    {
+        Iterator<Integer> it = toggles.keySet().iterator();
+        while ( it.hasNext() ) {
+            int portid = it.next();
+            ToggleButton tb = toggles.get(portid);
+            tb.setChecked(curstate.get(portid));
+        }
+
+    }
     class OutputControlSetStateTask extends SetStateTask {
         @Override
         protected void onPreExecute() {
-            tb1.setEnabled(false);
-            tb2.setEnabled(false);
+            setAllButtonsDisabled();
         }
         @Override
-        protected void onPostExecute(ArrayList<Boolean> booleans) {
-            super.onPostExecute(booleans);
+        protected void onPostExecute(HashMap<Integer,Boolean> state) {
+            super.onPostExecute(state);
 
 
-            if ( booleans.size() == 2 ) {
+            /*if ( booleans.size() == 2 ) {
                 tb1.setEnabled(true);
                 tb2.setEnabled(true);
                 tb1.setChecked(booleans.get(0));
                 tb2.setChecked(booleans.get(1));
-            }
+            }*/
+            curstate = state;
+            updateButtonState();
+            setAllButtonsEnabled();
 
         }
     }
@@ -41,22 +71,23 @@ public class OutputControl extends ActionBarActivity {
 
         @Override
         protected void onPreExecute() {
-            tb1.setEnabled(false);
-            tb2.setEnabled(false);
+            setAllButtonsDisabled();
         }
 
         @Override
-        protected void onPostExecute(ArrayList<Boolean> booleans) {
-            super.onPostExecute(booleans);
+        protected void onPostExecute(HashMap<Integer,Boolean> state) {
+            super.onPostExecute(state);
 
 
-            if ( booleans.size() == 2 ) {
+            /*if ( booleans.size() == 2 ) {
                 tb1.setEnabled(true);
                 tb2.setEnabled(true);
                 tb1.setChecked(booleans.get(0));
                 tb2.setChecked(booleans.get(1));
-            }
-
+            }*/
+            curstate = state;
+            updateButtonState();
+            setAllButtonsEnabled();
         }
     }
 
@@ -64,11 +95,53 @@ public class OutputControl extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_output_control);
-
+        toggles = new HashMap<Integer,ToggleButton>();
+        curstate = new HashMap<Integer,Boolean>();
         dev = (Device) getIntent().getSerializableExtra("device");
 
         TextView tvName = (TextView) findViewById(R.id.txt_out_title);
-        tb1 = (ToggleButton) findViewById(R.id.toggle1);
+
+        LinearLayout ll = (LinearLayout)findViewById(R.id.portsScroll);
+
+        Iterator<Integer> ports = dev.getDigitalOutNames().keySet().iterator();
+        while ( ports.hasNext() )
+        {
+            final int portid = ports.next();
+            String name = dev.getDigitalOutNames().get(portid);
+            LinearLayout ll2 = new LinearLayout(this);
+            ll2.setOrientation(LinearLayout.HORIZONTAL);
+            TextView tv = new TextView(this);
+            tv.setText(name);
+            ll2.addView(tv);
+
+            final ToggleButton tb = new ToggleButton(this);
+            tb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if ( tb.isPressed() )
+                    {
+                        Iterator<Integer> ports = dev.getDigitalOutNames().keySet().iterator();
+                        HashMap<Integer,Boolean> newstate = new HashMap<Integer, Boolean>();
+                        while ( ports.hasNext() ) {
+                            int portid2 = ports.next();
+                            newstate.put(portid2, toggles.get(portid2).isChecked());
+                        }
+                        task = new OutputControlSetStateTask();
+                        ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, newstate);
+
+                    }
+                }
+            });
+            ll2.addView(tb);
+
+            ll.addView(ll2);
+
+            toggles.put(portid, tb);
+
+        }
+
+
+        /*tb1 = (ToggleButton) findViewById(R.id.toggle1);
         tb2 = (ToggleButton) findViewById(R.id.toggle2);
         tb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -87,7 +160,7 @@ public class OutputControl extends ActionBarActivity {
                     ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, (isChecked ? 2 : 0) | (tb1.isChecked() ? 1 : 0));
                 }
             }
-        });
+        });*/
         tvName.setText(dev.getName());
 
 
