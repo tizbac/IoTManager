@@ -10,6 +10,7 @@ for i in range(0,16):
 iomapping = IOTIOMapping.IOTIOMapping()
 output_port_count = int(raw_input("Output port count:"))
 output_gpio_mapping = {}
+input_gpio_mapping = {}
 for i in range(0,output_port_count):
     portid = int(raw_input("Port ID(Arbitrary, unique between input and output):"))
     gpio = int(raw_input("GPIO Pin:"))

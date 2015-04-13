@@ -4,7 +4,7 @@ import socket
 import thread
 import IOTIOMapping
 QUERY_TIMEOUT = 5
-
+#Commands: A=Query status and static info, B=Set figital outputs, C=Read digital and analog inputs
 class IOTNode:
     def __init__(self,uid,name,iomapping,digitalstate=0,ipaddress=""):
         self.uid = uid
@@ -15,6 +15,7 @@ class IOTNode:
         self.digitalinputstate = {}
         self.ipaddress = ipaddress
         self.inputs_last_update = time.time()
+        self.last_seen = time.time()
     def packDigitalState(self):
         ports = []
         for port in self.digitalstate:
@@ -24,7 +25,7 @@ class IOTNode:
         self.analoginputstate = {}
         self.digitalinputstate = {}
         sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        sock.sendto(self.state, (self.ipaddress,8000))
+        sock.sendto("C", (self.ipaddress,8000))
         sock.settimeout(QUERY_TIMEOUT)
         starttime = time.time()
         while True:
@@ -45,8 +46,10 @@ class IOTNode:
                         self.digitalinputstate[portid] = int(portvalue)
                     else:
                         self.analoginputstate[portid] = float(portvalue)
+                print("Received new digital and analog input state: %s %s\n"%(str(self.digitalinputstate),str(self.analoginputstate)))
                 self.inputs_last_update = time.time()
                 break
+            
         sock.close()
     def applyDigitalState(self):
         sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
