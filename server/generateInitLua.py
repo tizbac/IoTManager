@@ -25,7 +25,7 @@ outfile = open(sys.argv[1],"w")
 outfile.write("nome = \"%s\"\n"%(name))
 outfile.write("uid = \"%s\"\n"%(uid))
 outfile.write("portconfig = \"%s\"\n"%(portconfig))
-outfile.write("tmr.alarm(0, 1000, 1, function()\n   if wifi.sta.getip() == nil then\n      print(\"Connecting to AP...\")\n   else\n      print('IP: ',wifi.sta.getip())\n      tmr.stop(0)\n   end\nend)\n")
+outfile.write("tmr.alarm(0, 1000, 1, function()\n   if wifi.sta.getip() == nil then\n      \n   else\n      print('IP: ',wifi.sta.getip())\n      tmr.stop(0)\n   end\nend)\n")
 
 for portid in output_gpio_mapping:
     outfile.write("gpio.mode(%d, gpio.OUTPUT)\n"%(output_gpio_mapping[portid]))
@@ -48,13 +48,22 @@ outfile.write("              index = 1\n")
 outfile.write("              for k in string.gmatch(i,\"[^:]+\") do\n")
 outfile.write("                   tokens[index] = k\n")
 outfile.write("                   index = index + 1\n")
+outfile.write("              end\n")
 outfile.write("              portid = tonumber(tokens[1])\n")
 outfile.write("              portnewstate = tonumber(tokens[2])\n")
 indent = "              "
 for portid in output_gpio_mapping:
     outfile.write(indent+"if portid == %d then\n"%(portid))
     outfile.write(indent+"   "*1+"if portnewstate == 1 then\n")
-    outfile.write(indent+"   "*2+"gpio.write(%d, gpio.HIGH)"%(output_gpio_mapping[portid]))
+    outfile.write(indent+"   "*2+"gpio.write(%d, gpio.HIGH)\n"%(output_gpio_mapping[portid]))
+    outfile.write(indent+"   "*1+"else\n")
+    outfile.write(indent+"   "*2+"gpio.write(%d, gpio.LOW)\n"%(output_gpio_mapping[portid]))
+    outfile.write(indent+"   "*1+"end\n")
+    outfile.write(indent+"   "*1+"state_%d = portnewstate\n"%(portid))
+    outfile.write(indent+"end\n")
+
+outfile.write("         end\n") #for i...
+outfile.write("   end\n") #if string.sub...
 outfile.write("end\n")
 outfile.write("srv=net.createServer(net.UDP)\nsrv:on(\"receive\",udprecv)\nsrv:listen(8000)\n")
 
