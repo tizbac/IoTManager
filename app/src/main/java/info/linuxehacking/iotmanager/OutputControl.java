@@ -19,7 +19,9 @@ public class OutputControl extends ActionBarActivity {
     private Device dev;
     private HashMap<Integer,ToggleButton> toggles;
     HashMap<Integer,Boolean> curstate;
+    HashMap<Integer,TextView> digitalin_views;
     AsyncTask task = null;
+    private OutputControlPollInputStateTask polltask;
 
     void setAllButtonsDisabled()
     {
@@ -41,9 +43,25 @@ public class OutputControl extends ActionBarActivity {
         while ( it.hasNext() ) {
             int portid = it.next();
             ToggleButton tb = toggles.get(portid);
-            tb.setChecked(curstate.get(portid));
+            if ( curstate.containsKey(portid) )
+                tb.setChecked(curstate.get(portid));
+            else
+                tb.setChecked(false);
         }
 
+    }
+    class OutputControlPollInputStateTask extends PollInputStateTask {
+        @Override
+        protected void onProgressUpdate(PollInputStateTaskResult... values) {
+            HashMap<Integer, Boolean> a = values[0].digitalInState;
+            Iterator<Integer> i = a.keySet().iterator();
+            while ( i.hasNext() )
+            {
+                int portid = i.next();
+                digitalin_views.get(portid).setText(""+a.get(portid));
+
+            }
+        }
     }
     class OutputControlSetStateTask extends SetStateTask {
         @Override
@@ -96,6 +114,7 @@ public class OutputControl extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_output_control);
         toggles = new HashMap<Integer,ToggleButton>();
+        digitalin_views = new HashMap<Integer,TextView>();
         curstate = new HashMap<Integer,Boolean>();
         dev = (Device) getIntent().getSerializableExtra("device");
 
@@ -139,7 +158,26 @@ public class OutputControl extends ActionBarActivity {
             toggles.put(portid, tb);
 
         }
+        ports = dev.getDigitalInNames().keySet().iterator();
+        while ( ports.hasNext() )
+        {
+            final int portid = ports.next();
+            String name = dev.getDigitalInNames().get(portid);
+            LinearLayout ll2 = new LinearLayout(this);
+            ll2.setOrientation(LinearLayout.HORIZONTAL);
+            TextView tv = new TextView(this);
+            tv.setText(name);
+            ll2.addView(tv);
 
+            TextView outV = new TextView(this);
+            ll2.addView(outV);
+            outV.setText("AAA");
+            digitalin_views.put(portid, outV);
+
+            ll.addView(ll2);
+
+
+        }
 
         /*tb1 = (ToggleButton) findViewById(R.id.toggle1);
         tb2 = (ToggleButton) findViewById(R.id.toggle2);
@@ -172,12 +210,19 @@ public class OutputControl extends ActionBarActivity {
         super.onStart();
         task = new OutputControlRetriveStateTask();
         ((OutputControlRetriveStateTask)task).execute(dev,this);
+        polltask = new OutputControlPollInputStateTask();
+        polltask.execute(dev,this);
+
     }
 
     @Override
     protected void onStop() {
         if ( task != null )
             task.cancel(true);
+        if ( polltask != null )
+        {
+            polltask.cancel(true);
+        }
         super.onStop();
     }
 

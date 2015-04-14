@@ -162,13 +162,13 @@ def discoveryThread():
           nodes[uid] = IOTNode.IOTNode(uid,name,iomapping,digitalstate,ipaddress)
         
         
-        if len(nodes[uid].iomapping.analoginputs) > 0 and len(nodes[uid].iomapping.digitalinputs) > 0:
+        if len(nodes[uid].iomapping.analoginputs) > 0 or len(nodes[uid].iomapping.digitalinputs) > 0:
             nodes[uid].tryQueryValues()
         
       except timeout:
         pass
     
-    for uid in nodes:
+    for uid in dict(nodes):
         if time.time() - nodes[uid].last_seen > LAST_SEEN_TIMEOUT:
             del nodes[uid]
     print("Discovery round complete", nodes)

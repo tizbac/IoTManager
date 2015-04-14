@@ -11,6 +11,7 @@ class OutputPort:
         return "OutputPort(%s,%s)"%(self.id,self.name)
 class InputPort:
     def __init__(self,id,name):
+        print(id)
         self.id = id
         self.name = name
     def __str__(self):
@@ -32,14 +33,15 @@ class IOTIOMapping:
         for do in self.outputs:
             ports.append("A\\%d\\%s"%(do.id,do.name))
         for di in self.digitalinputs:
-            ports.append("B\\%d\\%s"%(do.id,do.name))
+            ports.append("B\\%d\\%s"%(di.id,di.name))
         for ai in self.analoginputs:
-            ports.append("C\\%d\\%s\\%s"%(do.id,do.name,do.valuetype))
+            ports.append("C\\%d\\%s\\%s"%(ai.id,ai.name,ai.valuetype))
         configstr = "|".join(ports)
         sc = zlib.compress(configstr)
         return base64.b64encode(sc)
     def isInputPortDigital(self,id):
         for di in self.digitalinputs:
+            #print(str(di.id)+" "+str(id))
             if di.id == id:
                 return True
         return False
@@ -64,6 +66,7 @@ def getIOMappingFromConfigStr(s):
     configstrc = base64.b64decode(s)
     configstr = zlib.decompress(configstrc)
     res = IOTIOMapping()
+    #print(configstr)
     for port in configstr.split("|"):
         fields = port.split("\\")
         if fields[0] == "A":

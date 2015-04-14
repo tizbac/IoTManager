@@ -23,6 +23,7 @@ public class Device implements Serializable {
     private String uid;
     private HashMap<Integer,Boolean> digital_state;
     private HashMap<Integer,String> digital_out_names;
+    private HashMap<Integer,String> digital_in_names;
     public Device(String name, String ipaddr, String uid, HashMap<Integer,Boolean> digital_state, String configstr)
     {
         this.name = name;
@@ -30,6 +31,7 @@ public class Device implements Serializable {
         this.uid = uid;
         this.digital_state = digital_state;
         this.digital_out_names = new HashMap<Integer,String>();
+        this.digital_in_names = new HashMap<Integer,String>();
         byte configdataz[] = Base64.decode(configstr.getBytes(),Base64.DEFAULT);
         Compressor c = new Compressor();
         try {
@@ -41,7 +43,10 @@ public class Device implements Serializable {
                 if ( tokens[0].equals("A") )
                 {
                     digital_out_names.put(Integer.parseInt(tokens[1]),tokens[2]);
-
+                }
+                if ( tokens[0].equals("B") )
+                {
+                    digital_in_names.put(Integer.parseInt(tokens[1]),tokens[2]);
                 }
             }
         } catch (DataFormatException e) {
@@ -54,6 +59,11 @@ public class Device implements Serializable {
     {
         return digital_out_names;
     }
+    public HashMap<Integer,String> getDigitalInNames()
+    {
+        return digital_in_names;
+    }
+
     public String getIpaddr() {
         return ipaddr;
     }
@@ -91,6 +101,37 @@ public class Device implements Serializable {
             String state = digitalout.getString(port);
             boolean stateb = state.equals("1") ? true : false;
             res.put(Integer.parseInt(port),stateb);
+
+
+        }
+        return res;
+    }
+
+    public static HashMap<Integer,Boolean> getDigitalInStateFromJson(JSONObject deviceobj) throws JSONException {
+        HashMap<Integer,Boolean> res = new HashMap<Integer,Boolean>();
+        JSONObject digitalout = deviceobj.getJSONObject("digitalinstate");
+        Iterator<String> ports = digitalout.keys();
+        while ( ports.hasNext() )
+        {
+            String port = ports.next();
+            String state = digitalout.getString(port);
+            boolean stateb = state.equals("1") ? true : false;
+            res.put(Integer.parseInt(port),stateb);
+
+
+        }
+        return res;
+    }
+
+    public static HashMap<Integer,Float> getAnalogInStateFromJson(JSONObject deviceobj) throws JSONException {
+        HashMap<Integer,Float> res = new HashMap<Integer,Float>();
+        JSONObject analogin = deviceobj.getJSONObject("analoginstate");
+        Iterator<String> ports = analogin.keys();
+        while ( ports.hasNext() )
+        {
+            String port = ports.next();
+            String state = analogin.getString(port);
+            res.put(Integer.parseInt(port),Float.parseFloat(state));
 
 
         }
