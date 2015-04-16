@@ -1,7 +1,6 @@
 package info.linuxehacking.iotmanager;
 
 import android.os.AsyncTask;
-import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,39 +13,23 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.TimerTask;
 
 import javax.net.ssl.HttpsURLConnection;
 
 /**
- * Created by tiziano on 08/03/15.
+ * Created by tiziano on 13/04/15.
  */
-public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boolean>> {
-    private String error = null;
+public class PollInputStateTask extends AsyncTask<Object, PollInputStateTaskResult, PollInputStateTaskResult> {
     @Override
-    protected HashMap<Integer,Boolean> doInBackground(Object... params) {
-        HashMap<Integer,Boolean> res = null;
+    protected PollInputStateTaskResult doInBackground(Object... params) {
         Device dev = (Device)params[0];
-        HashMap<Integer,Boolean> newState = (HashMap<Integer,Boolean>)params[2];
+
         Configuration conf = Configuration.get((android.content.Context) params[1]);
 
-        StringBuilder newstatesb = new StringBuilder();
-
-        Iterator<Integer> it = newState.keySet().iterator();
-        while ( it.hasNext() )
-        {
-            int portid = it.next();
-            int portstate = newState.get(portid) == true ? 1 : 0;
-            newstatesb.append(String.format("%d:%d,",portid,portstate));
-
-        }
-
-        Log.i("setstate",newstatesb.toString());
-
         try {
-            URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/setstate/"+dev.getUid()+"/"+newstatesb.toString());
+            URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/getstate/"+dev.getUid());
             URLConnection conn = website.openConnection();
             ( (HttpsURLConnection) conn ).setSSLSocketFactory( SHA1VerifyGenerator.generateFactory(conf.valid_certificate));
             ( (HttpsURLConnection) conn ).setHostnameVerifier( SHA1VerifyGenerator.getNullVerifier());
@@ -62,7 +45,7 @@ public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boo
             BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
             while ((line = reader.readLine()) != null) {
-                System.err.println(line);
+                //System.err.println(line);
                 sb.append(line +"\n");
             }
             writer.close();
@@ -71,14 +54,19 @@ public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boo
             JSONObject result = new JSONObject(sb.toString());
             if ( ! result.isNull("error") )
             {
-                error = result.getString("error");
-                return res;
+                return null;
             }
 
             JSONObject item = result.getJSONObject("result");
-            HashMap<Integer, Boolean> state = Device.getDigitalStateFromJson(item);
+            HashMap<Integer, Boolean> state = Device.getDigitalInStateFromJson(item);
+            HashMap<Integer, Float> state_analog = Device.getAnalogInStateFromJson(item);
 
-            res = state;
+            PollInputStateTaskResult res = new PollInputStateTaskResult();
+            res.analogInState = state_analog;
+            res.digitalInState = state;
+            //TODO
+
+            return res;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -90,6 +78,12 @@ public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boo
             e.printStackTrace();
         }
 
-        return res;
+
+
+        return null;
     }
+
+
+
+
 }

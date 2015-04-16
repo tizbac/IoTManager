@@ -20,6 +20,8 @@ from twisted.internet import ssl, protocol, task, defer, reactor
 
 import urllib2
 
+LAST_SEEN_TIMEOUT = 120.0
+
 def ip2int(ip):
   i = ip.split(".")
   return int(i[3]) | ( int(i[2]) << 8 ) | ( int(i[1]) << 16 ) | ( int(i[0]) << 24 )
@@ -152,6 +154,7 @@ def discoveryThread():
         if uid in nodes:
           nodes[uid].name = name
           nodes[uid].ipaddress = ipaddress
+          nodes[uid].last_seen = time.time()
           #print(str(data[2])+" "+str(digitalstate)+" "+str(nodes[uid].digitalstate))
           if digitalstate != nodes[uid].digitalstate: #State is incoherent
             applyNodeState(nodes[uid])
@@ -159,9 +162,17 @@ def discoveryThread():
           nodes[uid] = IOTNode.IOTNode(uid,name,iomapping,digitalstate,ipaddress)
         
         
+        if len(nodes[uid].iomapping.analoginputs) > 0 or len(nodes[uid].iomapping.digitalinputs) > 0:
+            nodes[uid].tryQueryValues()
+        
       except timeout:
         pass
+    
+    for uid in dict(nodes):
+        if time.time() - nodes[uid].last_seen > LAST_SEEN_TIMEOUT:
+            del nodes[uid]
     print("Discovery round complete", nodes)
+    
     time.sleep(10.0)
   
 
@@ -204,6 +215,7 @@ class Simple(resource.Resource):
         return json.dumps({"error" : "Invalid argument" , "result" : None })
     if request.uri.startswith("/setstate"):
       sl = request.uri.split("/")
+      print("SETSTATE",str(sl))
       if len(sl) == 4:
         uid = sl[2]
         if uid in nodes_safe:
