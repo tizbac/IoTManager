@@ -7,4 +7,8 @@ GPIO3
 1
 4
 GPIO4
+1
+2
+Temperatura1
+A
 

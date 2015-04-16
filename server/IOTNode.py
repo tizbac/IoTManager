@@ -4,7 +4,13 @@ import socket
 import thread
 import random
 import IOTIOMapping
+import threading
+import rrdtool
+import os
+import math
 QUERY_TIMEOUT = 5
+DATADIR = "."
+COLORS = [ "#FF0000", "#00AA00", "#0000FF","#AA00AA"]
 #Commands: A=Query status and static info, B=Set figital outputs, C=Read digital and analog inputs
 class IOTNode:
     def __init__(self,uid,name,iomapping,digitalstate={},ipaddress=""):
@@ -17,6 +23,60 @@ class IOTNode:
         self.ipaddress = ipaddress
         self.inputs_last_update = time.time()
         self.last_seen = time.time()
+        self.rrdlock = threading.Lock()
+        self.rrdpath = ""
+        if len(self.iomapping.analoginputs) > 0:
+            try:
+                os.mkdir(os.path.join(DATADIR,"rrd"))
+            except:
+                pass
+            self.rrdpath = os.path.join(DATADIR,"rrd",self.uid+".rrd")
+            if not os.access(self.rrdpath, os.F_OK):
+                ds = []
+                for port in self.iomapping.analoginputs:
+                    ds.append("DS:port%d:GAUGE:120:U:U"%(port.id))
+                ds.append("RRA:AVERAGE:0.5:1:2880")
+                ds.append("RRA:AVERAGE:0.5:7:2880")
+                ds.append("RRA:AVERAGE:0.5:31:2880")
+                ds.append("RRA:AVERAGE:0.5:365:2880")
+                self.rrdlock.acquire()
+                rrdtool.create(self.rrdpath, "--step","30","--start","now",*ds)
+                self.rrdlock.release()
+    def generateGraphImage(self,gtype='day',includeports=None):
+        self.rrdlock.acquire()
+        if gtype == 'day':
+            start = "end-1d"
+        elif gtype == 'week':
+            start = "end-7d"
+        elif gtype == 'month':
+            start = "end-31d"
+        elif gtype == 'year':
+            start = "end-365d"
+        elif gtype == 'hour':
+            start = "end-1h"
+        addargs = []
+        for x in self.iomapping.analoginputs:
+            if includeports != None and x.id not in includeports:
+                continue
+            addargs.append("DEF:inport%d=%s:port%d:AVERAGE"%(x.id,self.rrdpath,x.id))
+        i = 0
+        for x in self.iomapping.analoginputs:
+            if includeports != None and x.id not in includeports:
+                continue
+            addargs.append("LINE1:inport%d%s:%s"%(x.id,COLORS[i],x.name))
+            i += 1
+        if i == 0:
+            self.rrdlock.release()
+            return None
+        try:
+            ret = rrdtool.graphv( "-" , "--end", "now", "--start" , start, "--height", "250", *addargs)
+        except rrdtool.error:
+            print("Graph error")
+            pass
+        
+        self.rrdlock.release()
+        
+        return ret["image"]
     def packDigitalState(self):
         ports = []
         for port in self.digitalstate:
@@ -48,6 +108,14 @@ class IOTNode:
                         self.digitalinputstate[portid] = int(portvalue)
                     else:
                         self.analoginputstate[portid] = float(portvalue)
+                if len(self.rrdpath) > 0:
+                    self.rrdlock.acquire()
+                    u = []
+                    for x in self.iomapping.analoginputs:
+                        u.append(str(self.analoginputstate[x.id]))
+                    updates = ":".join(u)
+                    rrdtool.update(self.rrdpath,"N:" + updates)
+                    self.rrdlock.release()
                 print("Received new digital and analog input state: %s %s\n"%(str(self.digitalinputstate),str(self.analoginputstate)))
                 self.inputs_last_update = time.time()
                 break
@@ -83,9 +151,13 @@ class IOTNode:
             if data == "C":
                 for x in self.iomapping.digitalinputs:
                     self.digitalinputstate[x.id] = random.randint(0,1)
+                for x in self.iomapping.analoginputs:
+                    self.analoginputstate[x.id] = math.sin(time.time()/120.0+x.id)
                 tokens = []
                 for x in self.iomapping.digitalinputs:
                     tokens.append("%d:%d"%(x.id,self.digitalinputstate[x.id]))
+                for x in self.iomapping.analoginputs:
+                    tokens.append("%d:%f"%(x.id,self.analoginputstate[x.id]))
                 digitalinstr = ";".join(tokens)
                 sock.sendto(digitalinstr, addr)
     def emulate(self):

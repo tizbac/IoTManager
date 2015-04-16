@@ -185,14 +185,22 @@ class Simple(resource.Resource):
     
     if request.getClientIP() in ips or request.getClientIP() == "127.0.0.1":
       # Output the auth QR-Code
-      request.setHeader("Content-Type", "image/png")
+      if request.uri == "/":
+        request.setHeader("Content-Type", "image/png")
+        
+        output = StringIO.StringIO()
+        qrcode.make(localip+",8080,"+key+","+shahash).save(output,'PNG')
+        s = output.getvalue()
+        output.close()
+        return s
+      if request.uri.startswith("/graph"):
+        sl = request.uri.split("/")
+        request.setHeader("Content-Type", "image/png")
+        if len(sl) == 4:
+            return nodes_safe[sl[2]].generateGraphImage(sl[3])
+        if len(sl) == 5:
+            return nodes_safe[sl[2]].generateGraphImage(sl[3],map(int,sl[4].split(",")))
       
-      output = StringIO.StringIO()
-      qrcode.make(localip+",8080,"+key+","+shahash).save(output,'PNG')
-      s = output.getvalue()
-      output.close()
-      
-      return s
     else:
       request.setHeader("Content-Type", "application/json")
       return json.dumps({"error" : "Access denied from "+request.getClientIP() , "result" : None })

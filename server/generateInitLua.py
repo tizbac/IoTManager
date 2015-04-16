@@ -27,7 +27,14 @@ for i in range(0,input_port_count):
     
     iomapping.digitalinputs.append(IOTIOMapping.InputPort(portid,in_name))
     input_gpio_mapping[portid] = gpio
-
+analog_input_port_count = int(raw_input("Analog input port count:"))
+for i in range(0,analog_input_port_count):
+    portid = int(raw_input("Port ID(Arbitrary, unique between input and output):"))
+    ain_name = raw_input("Input name:")
+    atype = raw_input("Input type:\nA: Temperature C, B: Humidity%%, C: Temperature F, D: Temperature K, ZZ: General purpose float:")
+    iomapping.analoginputs.append(IOTIOMapping.AnalogInputPort(portid,ain_name,atype))
+    
+    
 portconfig = iomapping.genConfigStr()
 
 if sys.argv[1] != "emulate":
@@ -39,8 +46,8 @@ if sys.argv[1] != "emulate":
 
     for portid in output_gpio_mapping:
         outfile.write("gpio.mode(%d, gpio.OUTPUT)\n"%(output_gpio_mapping[portid]))
-    outfile.write("gpio.write(%d, gpio.LOW)\n"%(output_gpio_mapping[portid]))
-        outfile.write("state_%d = 0\n"%(portid))
+        outfile.write("gpio.write(%d, gpio.LOW)\n"%(output_gpio_mapping[portid]))
+    outfile.write("state_%d = 0\n"%(portid))
     for portid in input_gpio_mapping:
         outfile.write("gpio.mode(%d, gpio.INPUT)\n"%(input_gpio_mapping[portid]))
 
