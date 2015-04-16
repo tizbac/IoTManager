@@ -28,6 +28,7 @@ outfile.write("tmr.alarm(0, 1000, 1, function()\n   if wifi.sta.getip() == nil t
 
 for portid in output_gpio_mapping:
     outfile.write("gpio.mode(%d, gpio.OUTPUT)\n"%(output_gpio_mapping[portid]))
+    outfile.write("gpio.write(%d, gpio.LOW)\n"%(output_gpio_mapping[portid]))
     outfile.write("state_%d = 0\n"%(portid))
 
 outfile.write("function udprecv(c,pl)\n")
