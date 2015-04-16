@@ -215,6 +215,7 @@ class Simple(resource.Resource):
         return json.dumps({"error" : "Invalid argument" , "result" : None })
     if request.uri.startswith("/setstate"):
       sl = request.uri.split("/")
+      print("SETSTATE",str(sl))
       if len(sl) == 4:
         uid = sl[2]
         if uid in nodes_safe:

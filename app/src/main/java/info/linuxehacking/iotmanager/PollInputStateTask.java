@@ -14,6 +14,7 @@ import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.TimerTask;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -26,66 +27,63 @@ public class PollInputStateTask extends AsyncTask<Object, PollInputStateTaskResu
         Device dev = (Device)params[0];
 
         Configuration conf = Configuration.get((android.content.Context) params[1]);
-        while (! isCancelled() )
-        {
-            try {
-                URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/getstate/"+dev.getUid());
-                URLConnection conn = website.openConnection();
-                ( (HttpsURLConnection) conn ).setSSLSocketFactory( SHA1VerifyGenerator.generateFactory(conf.valid_certificate));
-                ( (HttpsURLConnection) conn ).setHostnameVerifier( SHA1VerifyGenerator.getNullVerifier());
-                conn.setDoOutput(true);
-                String urlParameters = "key="+conf.key;
-                OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream());
-                writer.write(urlParameters);
-                writer.flush();
+
+        try {
+            URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/getstate/"+dev.getUid());
+            URLConnection conn = website.openConnection();
+            ( (HttpsURLConnection) conn ).setSSLSocketFactory( SHA1VerifyGenerator.generateFactory(conf.valid_certificate));
+            ( (HttpsURLConnection) conn ).setHostnameVerifier( SHA1VerifyGenerator.getNullVerifier());
+            conn.setDoOutput(true);
+            String urlParameters = "key="+conf.key;
+            OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream());
+            writer.write(urlParameters);
+            writer.flush();
 
 
-                StringBuilder sb = new StringBuilder();
-                String line;
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
-                while ((line = reader.readLine()) != null) {
-                    System.err.println(line);
-                    sb.append(line +"\n");
-                }
-                writer.close();
-                reader.close();
+            while ((line = reader.readLine()) != null) {
+                //System.err.println(line);
+                sb.append(line +"\n");
+            }
+            writer.close();
+            reader.close();
 
-                JSONObject result = new JSONObject(sb.toString());
-                if ( ! result.isNull("error") )
-                {
-                    continue;
-                }
-
-                JSONObject item = result.getJSONObject("result");
-                HashMap<Integer, Boolean> state = Device.getDigitalInStateFromJson(item);
-                HashMap<Integer, Float> state_analog = Device.getAnalogInStateFromJson(item);
-
-                PollInputStateTaskResult res = new PollInputStateTaskResult();
-                res.analogInState = state_analog;
-                res.digitalInState = state;
-                publishProgress(res);
-
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (KeyManagementException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
+            JSONObject result = new JSONObject(sb.toString());
+            if ( ! result.isNull("error") )
+            {
+                return null;
             }
 
+            JSONObject item = result.getJSONObject("result");
+            HashMap<Integer, Boolean> state = Device.getDigitalInStateFromJson(item);
+            HashMap<Integer, Float> state_analog = Device.getAnalogInStateFromJson(item);
 
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                break;
-            }
+            PollInputStateTaskResult res = new PollInputStateTaskResult();
+            res.analogInState = state_analog;
+            res.digitalInState = state;
+            //TODO
 
+            return res;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+
+
+
         return null;
     }
+
+
+
+
 }

@@ -1,6 +1,7 @@
 package info.linuxehacking.iotmanager;
 
 import android.os.AsyncTask;
+import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,6 +42,8 @@ public class SetStateTask extends AsyncTask<Object, Integer, HashMap<Integer,Boo
             newstatesb.append(String.format("%d:%d,",portid,portstate));
 
         }
+
+        Log.i("setstate",newstatesb.toString());
 
         try {
             URL website = new URL("https://"+conf.ipaddress+":"+conf.port+"/setstate/"+dev.getUid()+"/"+newstatesb.toString());
