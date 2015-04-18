@@ -5,9 +5,11 @@ import sys
 name = raw_input("Node name:")
 name = name.replace(",","")
 uid = ""
-for i in range(0,16):
-    uid += "%X"%(random.randint(0,16))
-
+if len(sys.argv) < 3:
+    for i in range(0,16):
+        uid += "%X"%(random.randint(0,16))
+else:
+    uid = sys.argv[2].upper()
 iomapping = IOTIOMapping.IOTIOMapping()
 output_port_count = int(raw_input("Output port count:"))
 output_gpio_mapping = {}

@@ -1,5 +1,6 @@
 package info.linuxehacking.iotmanager;
 
+import android.app.ActionBar;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
@@ -12,13 +13,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Timer;
 
 
-public class OutputControl extends ActionBarActivity {
+public class DeviceActivity extends ActionBarActivity {
     private Device dev;
     private HashMap<Integer,ToggleButton> toggles;
     HashMap<Integer,Boolean> curstate;
@@ -161,7 +161,7 @@ public class OutputControl extends ActionBarActivity {
                         Log.i("tb", "setstate");
 
                         task = new OutputControlSetStateTask();
-                        ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, newstate);
+                        ((OutputControlSetStateTask) task).execute(dev, DeviceActivity.this, newstate);
 
                     }
                 }
@@ -194,6 +194,18 @@ public class OutputControl extends ActionBarActivity {
 
         }
 
+        String[] types = {"hour", "day", "week", "month", "year"};
+        if ( dev.getAnalogInNames().size() > 0 )
+        {
+            for ( int i = 0; i < types.length; i++ ) {
+                TextView v1 = new TextView(this);
+                v1.setText((types[i]+"ly"));
+                GraphView gv = new GraphView(this, Configuration.get(this), dev, types[i]);
+                ll.addView(v1, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                ll.addView(gv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            }
+        }
+
         /*tb1 = (ToggleButton) findViewById(R.id.toggle1);
         tb2 = (ToggleButton) findViewById(R.id.toggle2);
         tb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -201,7 +213,7 @@ public class OutputControl extends ActionBarActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if ( tb1.isPressed() ) {
                     task = new OutputControlSetStateTask();
-                    ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, (isChecked ? 1 : 0) | (tb2.isChecked() ? 2 : 0));
+                    ((OutputControlSetStateTask) task).execute(dev, DeviceActivity.this, (isChecked ? 1 : 0) | (tb2.isChecked() ? 2 : 0));
                 }
             }
         });
@@ -210,7 +222,7 @@ public class OutputControl extends ActionBarActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if ( tb2.isPressed() ) {
                     task = new OutputControlSetStateTask();
-                    ((OutputControlSetStateTask) task).execute(dev, OutputControl.this, (isChecked ? 2 : 0) | (tb1.isChecked() ? 1 : 0));
+                    ((OutputControlSetStateTask) task).execute(dev, DeviceActivity.this, (isChecked ? 2 : 0) | (tb1.isChecked() ? 1 : 0));
                 }
             }
         });*/
@@ -230,7 +242,7 @@ public class OutputControl extends ActionBarActivity {
             if ( t != null )
                 t.cancel(true);
             t = new PollInputStateTaskOC();
-            t.execute(dev, OutputControl.this);
+            t.execute(dev, DeviceActivity.this);
             h.postDelayed(this, 1000);
         }
     };

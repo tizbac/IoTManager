@@ -20,8 +20,12 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".OutputControl"
+            android:name=".DeviceActivity"
             android:label="@string/title_activity_output_control" >
+        </activity>
+        <activity
+            android:name=".CustomGraphActivity"
+            android:label="@string/title_activity_custom_graph" >
         </activity>
     </application>
 

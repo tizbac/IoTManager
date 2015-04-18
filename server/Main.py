@@ -130,9 +130,9 @@ def discoveryThread():
     print("Discovery round starting...")
     
     disc_sock.settimeout(10)
-    for x in ips[1:len(ips)-1]:
-      disc_sock.sendto("A",(x,8000))
-      time.sleep(0.01)
+    for x in ips[:len(ips)-1]:
+        disc_sock.sendto("A",(x,8000))
+        time.sleep(0.01)
     disc_sock.settimeout(0.1)
     while time.time() - starttime < 5.0:
       try:
@@ -221,6 +221,13 @@ class Simple(resource.Resource):
         return json.dumps({"error" : None , "result" : { "digitaloutstate" : node.digitalstate, "digitalinstate" : node.digitalinputstate, "analoginstate" : node.analoginputstate}})
       else:
         return json.dumps({"error" : "Invalid argument" , "result" : None })
+    if request.uri.startswith("/graph"):
+        sl = request.uri.split("/")
+        request.setHeader("Content-Type", "image/png")
+        if len(sl) == 4:
+            return nodes_safe[sl[2]].generateGraphImage(sl[3])
+        if len(sl) == 5:
+            return nodes_safe[sl[2]].generateGraphImage(sl[3],map(int,sl[4].split(",")))
     if request.uri.startswith("/setstate"):
       sl = request.uri.split("/")
       print("SETSTATE",str(sl))

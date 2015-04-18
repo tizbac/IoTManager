@@ -24,6 +24,7 @@ public class Device implements Serializable {
     private HashMap<Integer,Boolean> digital_state;
     private HashMap<Integer,String> digital_out_names;
     private HashMap<Integer,String> digital_in_names;
+    private HashMap<Integer,String> analog_in_names;
     public Device(String name, String ipaddr, String uid, HashMap<Integer,Boolean> digital_state, String configstr)
     {
         this.name = name;
@@ -32,6 +33,7 @@ public class Device implements Serializable {
         this.digital_state = digital_state;
         this.digital_out_names = new HashMap<Integer,String>();
         this.digital_in_names = new HashMap<Integer,String>();
+        this.analog_in_names = new HashMap<Integer,String>();
         byte configdataz[] = Base64.decode(configstr.getBytes(),Base64.DEFAULT);
         Compressor c = new Compressor();
         try {
@@ -48,6 +50,10 @@ public class Device implements Serializable {
                 {
                     digital_in_names.put(Integer.parseInt(tokens[1]),tokens[2]);
                 }
+                if ( tokens[0].equals("C") )
+                {
+                    analog_in_names.put(Integer.parseInt(tokens[1]), tokens[2]);
+                }
             }
         } catch (DataFormatException e) {
             e.printStackTrace();
@@ -62,6 +68,10 @@ public class Device implements Serializable {
     public HashMap<Integer,String> getDigitalInNames()
     {
         return digital_in_names;
+    }
+    public HashMap<Integer,String> getAnalogInNames()
+    {
+        return analog_in_names;
     }
 
     public String getIpaddr() {

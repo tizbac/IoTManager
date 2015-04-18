@@ -43,7 +43,7 @@ public class DeviceList extends ActionBarActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 DevicesAdatper adpt = (DevicesAdatper) parent.getAdapter();
                 Device dev = adpt.getItem(position);
-                Intent i = new Intent(DeviceList.this,OutputControl.class);
+                Intent i = new Intent(DeviceList.this,DeviceActivity.class);
                 i.putExtra("device", dev);
                 startActivity(i);
             }
@@ -89,7 +89,11 @@ public class DeviceList extends ActionBarActivity {
         if (id == R.id.action_configure) {
             requireConfiguration();
         }
-
+        if (id == R.id.action_customgraph)
+        {
+            Intent i = new Intent(this,CustomGraphActivity.class);
+            startActivity(i);
+        }
         return super.onOptionsItemSelected(item);
     }
 
