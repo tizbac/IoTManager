@@ -10,7 +10,7 @@ import os
 import math
 QUERY_TIMEOUT = 5
 DATADIR = "."
-COLORS = [ "#FF0000", "#00AA00", "#0000FF","#AA00AA"]
+COLORS = [ "#FF0000", "#00AA00", "#0000FF","#AA00AA", "#999900", "#009999", "#990099", "#999999"]
 #Commands: A=Query status and static info, B=Set figital outputs, C=Read digital and analog inputs
 class IOTNode:
     def __init__(self,uid,name,iomapping,digitalstate={},ipaddress=""):

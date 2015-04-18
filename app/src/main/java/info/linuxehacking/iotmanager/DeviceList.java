@@ -17,6 +17,7 @@ public class DeviceList extends ActionBarActivity {
 
     private ListView lv;
     private DeviceListScanDevicesTask task = null;
+    private ArrayList<Device> m_current_devices = null;
     class DeviceListScanDevicesTask extends ScanDevicesTask {
         @Override
         protected void onProgressUpdate(ArrayList<Device>... values) {
@@ -25,6 +26,7 @@ public class DeviceList extends ActionBarActivity {
 
         @Override
         protected void onPostExecute(ArrayList<Device> devices) {
+            m_current_devices = devices;
             lv.setAdapter(new DevicesAdatper(DeviceList.this, devices));
             task = null;
         }
@@ -92,6 +94,7 @@ public class DeviceList extends ActionBarActivity {
         if (id == R.id.action_customgraph)
         {
             Intent i = new Intent(this,CustomGraphActivity.class);
+            i.putExtra("devices",m_current_devices);
             startActivity(i);
         }
         return super.onOptionsItemSelected(item);

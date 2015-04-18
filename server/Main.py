@@ -10,6 +10,7 @@ import IOTIOMapping
 import IOTNode
 import re
 import argparse
+import CustomGraph
 import os.path
 from OpenSSL import crypto
 
@@ -212,8 +213,8 @@ class Simple(resource.Resource):
       return json.dumps({"error" : "Access denied from "+request.getClientIP() , "result" : None })
     if request.uri.startswith("/list"):
       return json.dumps({"error" : None , "result" : IOTNode.createJSONReprFromNodeDict(nodes_safe)})
+    sl = request.uri.split("/")
     if request.uri.startswith("/getstate"):
-      sl = request.uri.split("/")
       if len(sl) == 3:
         if not sl[2] in nodes_safe:
           return json.dumps({"error" : "No such device" , "result" : None })
@@ -221,6 +222,15 @@ class Simple(resource.Resource):
         return json.dumps({"error" : None , "result" : { "digitaloutstate" : node.digitalstate, "digitalinstate" : node.digitalinputstate, "analoginstate" : node.analoginputstate}})
       else:
         return json.dumps({"error" : "Invalid argument" , "result" : None })
+    if request.uri.startswith("/customgraph"):
+        gtype = sl[2]
+        ports = []
+        for x in sl[3:]:
+            tk = x.split(",")
+            node = nodes_safe[tk[0]]
+            portid = int(tk[1])
+            ports.append((node,portid))
+        return CustomGraph.generateCustomGraphPNG(ports,gtype)
     if request.uri.startswith("/graph"):
         sl = request.uri.split("/")
         request.setHeader("Content-Type", "image/png")

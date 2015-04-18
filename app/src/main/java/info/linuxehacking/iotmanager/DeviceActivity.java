@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
@@ -200,7 +201,9 @@ public class DeviceActivity extends ActionBarActivity {
             for ( int i = 0; i < types.length; i++ ) {
                 TextView v1 = new TextView(this);
                 v1.setText((types[i]+"ly"));
-                GraphView gv = new GraphView(this, Configuration.get(this), dev, types[i]);
+                GraphView gv = new GraphView(this, Configuration.get(this), dev, types[i], false);
+                gv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                gv.setAdjustViewBounds(true);
                 ll.addView(v1, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
                 ll.addView(gv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             }

@@ -4,14 +4,61 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 
 public class CustomGraphActivity extends ActionBarActivity {
 
+    private ArrayList<Device> devices = null;
+    private LinkedList<GraphView> graphviews = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_custom_graph);
+        devices = (ArrayList<Device>) getIntent().getExtras().getSerializable("devices");
+
+        ListView portlist = (ListView) findViewById(R.id.list_customgraph);
+        CustomGraphAdapter cga = new CustomGraphAdapter(this, devices);
+        cga.setSelChangeListener(new CustomGraphAdapter.OnSelectionChangedListener() {
+            @Override
+            public void changed(ArrayList<CustomGraphAdapter.Port> ports) {
+                Iterator<GraphView> git = graphviews.iterator();
+                while ( git.hasNext() )
+                {
+                    GraphView gv = git.next();
+                    gv.setCustomPorts(ports);
+
+                }
+            }
+        });
+        portlist.setAdapter(cga);
+
+
+        graphviews = new LinkedList<GraphView>();
+        LinearLayout ll = (LinearLayout)findViewById(R.id.ll_custom_graphs);
+
+        String[] types = {"hour", "day", "week", "month", "year"};
+        for ( int i = 0; i < types.length; i++ ) {
+            TextView v1 = new TextView(this);
+            v1.setText((types[i]+"ly"));
+            GraphView gv = new GraphView(this, Configuration.get(this), null, types[i], true);
+            gv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            gv.setAdjustViewBounds(true);
+            ll.addView(v1, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            ll.addView(gv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            graphviews.add(gv);
+        }
+
+
+
     }
 
 

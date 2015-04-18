@@ -16,6 +16,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -27,6 +29,11 @@ public class GraphView extends ImageView{
     private Device dev;
     private String type;
     private Handler h;
+    private boolean customMode;
+
+    private ArrayList<CustomGraphAdapter.Port> customports;
+
+
     private Runnable startRefreshTask = new Runnable() {
         DownloadImageTask t = null;
         @Override
@@ -35,16 +42,19 @@ public class GraphView extends ImageView{
                 t.cancel(true);
             t = new DownloadImageTask();
             t.execute(0);
+            h.removeCallbacks(this);
             h.postDelayed(startRefreshTask,30000);
         }
 
 
     };
-    public GraphView(Context context, Configuration config, Device dev, String type) {
+    public GraphView(Context context, Configuration config, Device dev, String type, boolean custom) {
         super(context);
         this.config = config;
         this.dev = dev;
         this.type = type;
+        customMode = custom;
+        customports = new ArrayList<CustomGraphAdapter.Port>();
         h = new Handler();
 
 
@@ -54,6 +64,7 @@ public class GraphView extends ImageView{
         this.config = null;
         this.dev = null;
         this.type = null;
+        customMode = false;
         h = new Handler();
 
 
@@ -63,6 +74,12 @@ public class GraphView extends ImageView{
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         h.removeCallbacks(startRefreshTask);
+    }
+
+    public void setCustomPorts(ArrayList<CustomGraphAdapter.Port> newports)
+    {
+        customports = newports;
+        startRefreshTask.run();
     }
 
     @Override
@@ -82,8 +99,21 @@ public class GraphView extends ImageView{
             try {
                 URL website = null;
 
-                website = new URL("https://"+config.ipaddress+":"+config.port+"/graph/"+dev.getUid()+"/"+type);
+                if ( !customMode )
+                    website = new URL("https://"+config.ipaddress+":"+config.port+"/graph/"+dev.getUid()+"/"+type);
+                else
+                {
+                    StringBuilder reqstr = new StringBuilder();
+                    Iterator<CustomGraphAdapter.Port> ports = customports.iterator();
+                    while ( ports.hasNext() )
+                    {
+                        CustomGraphAdapter.Port p = ports.next();
+                        reqstr.append("/"+p.dev.getUid()+","+p.portid);
+                    }
+                    website = new URL("https://"+config.ipaddress+":"+config.port+"/customgraph/"+type+reqstr.toString());
 
+
+                }
                 URLConnection conn = website.openConnection();
                 ( (HttpsURLConnection) conn ).setSSLSocketFactory( SHA1VerifyGenerator.generateFactory(config.valid_certificate));
                 ( (HttpsURLConnection) conn ).setHostnameVerifier( SHA1VerifyGenerator.getNullVerifier());
