@@ -101,6 +101,9 @@ class IOTNode:
                 data = data.split(";")
                 for port in data:
                     port = port.split(":")
+                    if len(port) < 2:
+                        print("Invalid data:"+str(data))
+                        continue
                     portid = int(port[0])
                     portvalue = port[1]
                    

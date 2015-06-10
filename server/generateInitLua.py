@@ -5,6 +5,8 @@ import sys
 name = raw_input("Node name:")
 name = name.replace(",","")
 uid = ""
+dht11temp = False
+dht11humidity = False
 if len(sys.argv) < 3:
     for i in range(0,16):
         uid += "%X"%(random.randint(0,16))
@@ -34,6 +36,10 @@ for i in range(0,analog_input_port_count):
     portid = int(raw_input("Port ID(Arbitrary, unique between input and output):"))
     ain_name = raw_input("Input name:")
     atype = raw_input("Input type:\nA: Temperature C, B: Humidity%%, C: Temperature F, D: Temperature K, ZZ: General purpose float:")
+    if atype == "A":
+        dht11temp = True
+    if atype == "B":
+        dht11humidity = True
     iomapping.analoginputs.append(IOTIOMapping.AnalogInputPort(portid,ain_name,atype))
     
     
@@ -44,12 +50,15 @@ if sys.argv[1] != "emulate":
     outfile.write("nome = \"%s\"\n"%(name))
     outfile.write("uid = \"%s\"\n"%(uid))
     outfile.write("portconfig = \"%s\"\n"%(portconfig))
-    outfile.write("tmr.alarm(0, 1000, 1, function()\n   if wifi.sta.getip() == nil then\n      \n   else\n      print('IP: ',wifi.sta.getip())\n      tmr.stop(0)\n   end\nend)\n")
+    
+    if dht11humidity or dht11temp:
+        outfile.write("DHT = require(\"dht_lib\")\n")
+        outfile.write("tmr.alarm(0, 1000, 1, function()\n   DHT.read11(3)\nend)\n")
 
     for portid in output_gpio_mapping:
         outfile.write("gpio.mode(%d, gpio.OUTPUT)\n"%(output_gpio_mapping[portid]))
         outfile.write("gpio.write(%d, gpio.LOW)\n"%(output_gpio_mapping[portid]))
-    outfile.write("state_%d = 0\n"%(portid))
+        outfile.write("state_%d = 0\n"%(portid))
     for portid in input_gpio_mapping:
         outfile.write("gpio.mode(%d, gpio.INPUT)\n"%(input_gpio_mapping[portid]))
 
@@ -60,7 +69,10 @@ if sys.argv[1] != "emulate":
     for portid in output_gpio_mapping:
         statestr_tokens.append("\"%d:\"..state_%d"%(portid,portid))
     statestr = "..\";\"..".join(statestr_tokens)
-    outfile.write("         c:send(uid..\",\"..nome..\",\"..%s..\",\"..portconfig)\n"%(statestr))
+    if len(statestr) > 0:
+        outfile.write("         c:send(uid..\",\"..nome..\",\"..%s..\",\"..portconfig)\n"%(statestr))
+    else:
+        outfile.write("         c:send(uid..\",\"..nome..\",,\"..portconfig)\n")
     outfile.write("   end\n")
     outfile.write("   if string.sub(pl,1,1) == \"B\" then\n")
     outfile.write("         newstatestr = string.sub(pl,2)\n")
@@ -87,12 +99,17 @@ if sys.argv[1] != "emulate":
     outfile.write("         end\n") #for i...
     outfile.write("   end\n") #if string.sub...
     outfile.write("   if pl == \"C\" then\n")
-    digitalinstr = ""
-    digitalinstr_tokens = []
+    instr = ""
+    instr_tokens = []
     for portid in input_gpio_mapping:
-        digitalinstr_tokens.append("\"%d:\"..gpio.read(%d)"%(portid,input_gpio_mapping[portid]))
-    digitalinstr = "..\";\"...".join(digitalinstr_tokens)
-    outfile.write("        c:send(%s)\n"%(digitalinstr))
+        instr_tokens.append("\"%d:\"..gpio.read(%d)"%(portid,input_gpio_mapping[portid]))
+    for port in iomapping.analoginputs:
+        if port.valuetype == "A":
+            instr_tokens.append("\"%d:\"..DHT.getTemperature()"%(port.id))
+        if port.valuetype == "B":
+            instr_tokens.append("\"%d:\"..DHT.getHumidity()"%(port.id))
+    instr = "..\";\"..".join(instr_tokens)
+    outfile.write("        c:send(%s)\n"%(instr))
     outfile.write("   end\n")
     outfile.write("end\n")
     outfile.write("srv=net.createServer(net.UDP)\nsrv:on(\"receive\",udprecv)\nsrv:listen(8000)\n")
@@ -103,6 +120,11 @@ if sys.argv[1] != "emulate":
 
 
     outfile.close()
+    print("\nNow do:")
+    print("luatool.py -f %s -t init.lua"%sys.argv[1])
+    print("luatool.py -f dht_lib.lua -t dht_lib.lua")
 else:
     node = IOTNode.IOTNode(uid,name,iomapping,{})
     node._th_emulate()
+
+
