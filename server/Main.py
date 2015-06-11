@@ -31,12 +31,12 @@ def int2ip(i):
 
 parser = argparse.ArgumentParser(description="IOT Manager", conflict_handler='resolve')
 parser.add_argument("--help")
-parser.add_argument('--net', type=str, help="Network to use x.y.z.w/xx", required=True)
+#parser.add_argument('--net', type=str, help="Network to use x.y.z.w/xx", required=True)
 parser.add_argument('--publicip', type=str, help="Override public ip address")
 
-if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit(1)
+#if len(sys.argv) == 1:
+#    parser.print_help()
+#    sys.exit(1)
     
 args = parser.parse_args(sys.argv[1:])
 
@@ -50,12 +50,12 @@ else:
 
 nodes = {} # { UID, Name , State, IP }
 
-start = ip2int(args.net.split("/")[0])
-mask = int(args.net.split("/")[1])
+#start = ip2int(args.net.split("/")[0])
+#mask = int(args.net.split("/")[1])
 ips = []
 
-for x in range(start+1,start+2**(32-mask)-1):
-  ips.append(int2ip(x))
+#for x in range(start+1,start+2**(32-mask)-1):
+#  ips.append(int2ip(x))
 
 
 disc_sock = socket(AF_INET,SOCK_DGRAM)
@@ -144,6 +144,7 @@ def discoveryThread():
         name = data[1]
         ipaddress = addr[0]
         
+        
         if len(data) > 3:
             iomapping = data[3]
         else:
@@ -176,9 +177,31 @@ def discoveryThread():
     
     time.sleep(10.0)
   
+class LocalRESTServer(resource.Resource):
+  isLeaf = True
+  def render_POST(self, request):
+      requestbody = json.loads(request.content.read())
+      if request.uri.startswith("/announce"):
+          uid = requestbody["uid"].encode('ascii','ignore')
+          name = requestbody["nome"].encode('ascii','ignore')
+          ipaddress = request.getClientIP()
+          print([uid,name,ipaddress])
+          iomapping = IOTIOMapping.getIOMappingFromConfigStr(requestbody["portconfig"])
+          if uid in nodes:
+            nodes[uid].name = name
+            nodes[uid].ipaddress = ipaddress
+            nodes[uid].last_seen = time.time()
+          else:
+            nodes[uid] = IOTNode.IOTNode(uid,name,iomapping,ipaddress)
+          return ""
+      if request.uri.startswith("/inputstatus"):
+          uid = requestbody["uid"].encode('ascii','ignore')
+          if uid in nodes:
+              nodes[uid].updateInputData(requestbody["status"].encode('ascii','ignore'))
+              return nodes[uid].packDigitalState()
+          return ""
 
-
-class Simple(resource.Resource):
+class PublicServer(resource.Resource):
   isLeaf = True
   def render_GET(self, request):
     global ips
@@ -264,16 +287,19 @@ def onexit(signum, frame):
   
 signal.signal(signal.SIGINT, onexit)
 signal.signal(signal.SIGTERM, onexit)
-dth = threading.Thread(target=discoveryThread)
-dth.setDaemon(True)
-dth.start()
+#dth = threading.Thread(target=discoveryThread) DEPRECATED
+#dth.setDaemon(True)
+#dth.start()
 
 
 
 
-site = server.Site(Simple())
+site = server.Site(PublicServer())
+sitelocal = server.Site(LocalRESTServer())
 reactor.listenSSL(8080, site, contextFactory = sslContext)
+reactor.listenTCP(8081, sitelocal)
 print("Listening on 8080")
+print("Listening on 8081")
 reactor.run()
 print("Exited.")
 sys.exit(0)

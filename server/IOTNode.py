@@ -13,11 +13,11 @@ DATADIR = "."
 COLORS = [ "#FF0000", "#00AA00", "#0000FF","#AA00AA", "#999900", "#009999", "#990099", "#999999"]
 #Commands: A=Query status and static info, B=Set figital outputs, C=Read digital and analog inputs
 class IOTNode:
-    def __init__(self,uid,name,iomapping,digitalstate={},ipaddress=""):
+    def __init__(self,uid,name,iomapping,ipaddress=""):
         self.uid = uid
         self.name = name
         self.iomapping = iomapping
-        self.digitalstate = digitalstate
+        self.digitalstate = {}
         self.analoginputstate = {}
         self.digitalinputstate = {}
         self.ipaddress = ipaddress
@@ -98,32 +98,34 @@ class IOTNode:
                 break
             if addr[0] == self.ipaddress:
                 # portid:value;
-                data = data.split(";")
-                for port in data:
-                    port = port.split(":")
-                    if len(port) < 2:
-                        print("Invalid data:"+str(data))
-                        continue
-                    portid = int(port[0])
-                    portvalue = port[1]
-                   
-                    if self.iomapping.isInputPortDigital(portid):
-                        self.digitalinputstate[portid] = int(portvalue)
-                    else:
-                        self.analoginputstate[portid] = float(portvalue)
-                if len(self.rrdpath) > 0:
-                    self.rrdlock.acquire()
-                    u = []
-                    for x in self.iomapping.analoginputs:
-                        u.append(str(self.analoginputstate[x.id]))
-                    updates = ":".join(u)
-                    rrdtool.update(self.rrdpath,"N:" + updates)
-                    self.rrdlock.release()
-                print("Received new digital and analog input state: %s %s\n"%(str(self.digitalinputstate),str(self.analoginputstate)))
-                self.inputs_last_update = time.time()
+                self.updateInputData(data)
                 break
-            
         sock.close()
+    def updateInputData(self,inputstr):
+        data = inputstr.split(";")
+        for port in data:
+            port = port.split(":")
+            if len(port) < 2:
+                print("Invalid data:"+str(data))
+                continue
+            portid = int(port[0])
+            portvalue = port[1]
+            
+            if self.iomapping.isInputPortDigital(portid):
+                self.digitalinputstate[portid] = int(portvalue)
+            else:
+                self.analoginputstate[portid] = float(portvalue)
+        if len(self.rrdpath) > 0:
+            self.rrdlock.acquire()
+            u = []
+            for x in self.iomapping.analoginputs:
+                u.append(str(self.analoginputstate[x.id]))
+            updates = ":".join(u)
+            rrdtool.update(self.rrdpath,"N:" + updates)
+            self.rrdlock.release()
+        print("Received new digital and analog input state: %s %s\n"%(str(self.digitalinputstate),str(self.analoginputstate)))
+        self.inputs_last_update = time.time()
+        
     def applyDigitalState(self):
         sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         sock.sendto("B"+self.packDigitalState(), (self.ipaddress,8000))
